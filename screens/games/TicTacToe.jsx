@@ -1,5 +1,11 @@
 import React, { useState } from 'react';
-import { View, Text, StyleSheet, TouchableOpacity, Alert } from 'react-native';
+import {
+  View,
+  Text,
+  StyleSheet,
+  TouchableOpacity,
+  Modal,
+} from 'react-native';
 import { SafeAreaView, SafeAreaProvider } from 'react-native-safe-area-context';
 import Ionicons from 'react-native-vector-icons/Ionicons';
 import { useNavigation } from '@react-navigation/native';
@@ -9,11 +15,35 @@ const TicTacToe = () => {
   const [playerOne, setPlayerOne] = useState('X');
   const [playerTwo, setPlayerTwo] = useState('O');
   const [turn, setTurn] = useState(playerOne);
+  const [modalVisible, setModalVisible] = useState(false);
+  const [modalMessage, setModalMessage] = useState('');
+  const [showDropdownBtns, setShowDropdownsBtns] = useState(false);
 
-  const xColor = '#ff6b6b'; // coral-pink
-  const oColor = '#4ecdc4'; // mint-teal
+  const xColor = '#ff6b6b';
+  const oColor = '#4ecdc4';
 
   const navigation = useNavigation();
+
+  const winningCombos = [
+    [0, 1, 2],
+    [3, 4, 5],
+    [6, 7, 8],
+    [0, 3, 6],
+    [1, 4, 7],
+    [2, 5, 8],
+    [0, 4, 8],
+    [2, 4, 6],
+  ];
+
+  const checkWinner = (board) => {
+    for (let combo of winningCombos) {
+      const [a, b, c] = combo;
+      if (board[a] && board[a] === board[b] && board[a] === board[c]) {
+        return board[a];
+      }
+    }
+    return null;
+  };
 
   const tilePress = (i) => {
     if (board[i] !== null) return;
@@ -22,14 +52,36 @@ const TicTacToe = () => {
     newBoard[i] = turn;
     setBoard(newBoard);
 
-    const isDraw = newBoard.every(tile => tile !== null);
+    const winner = checkWinner(newBoard);
+    if (winner) {
+      setModalMessage(`${winner} wins! 🎉`);
+      setModalVisible(true);
+      return;
+    }
+
+    const isDraw = newBoard.every((tile) => tile !== null);
     if (isDraw) {
-      Alert.alert('Draw!', 'That was a close one! 😄');
-      setBoard(Array(9).fill(null));
+      setModalMessage("It's a draw! 🤝");
+      setModalVisible(true);
       return;
     }
 
     setTurn(turn === playerOne ? playerTwo : playerOne);
+  };
+
+  const handleReset = () => {
+    setBoard(Array(9).fill(null));
+    setTurn(playerOne);
+    setModalVisible(false);
+  };
+
+  const handleOptionPress = (option) => {
+    setShowDropdownsBtns(false);
+    if (option === 'Reset Game') handleReset();
+    if (option === 'How to Play') {
+      setModalMessage("Tap a tile to place your mark. First to align 3 wins!");
+      setModalVisible(true);
+    }
   };
 
   return (
@@ -42,14 +94,47 @@ const TicTacToe = () => {
 
           <Text style={styles.headerTitle}>Tic Tac Toe</Text>
 
-          <TouchableOpacity onPress={() => {}}>
+          <TouchableOpacity
+            style={styles.dropdownToggle}
+            onPress={() => setShowDropdownsBtns(!showDropdownBtns)}
+          >
             <Ionicons name="ellipsis-horizontal" size={20} color="#888" />
           </TouchableOpacity>
         </View>
 
+          {showDropdownBtns && (
+            <TouchableOpacity
+              activeOpacity={1}
+              style={styles.dropdownOverlay}
+              onPress={() => setShowDropdownsBtns(false)}
+            >
+
+              <View style={styles.dropdown}>
+
+                <TouchableOpacity
+                  style={styles.dropdownItem}
+                  onPress={() => handleOptionPress('Reset Game')}
+                >
+                  <Text style={styles.dropdownText}>Reset Game</Text>
+                </TouchableOpacity>
+
+                <TouchableOpacity
+                  style={styles.dropdownItem}
+                  onPress={() => handleOptionPress('How to Play')}
+                >
+                  <Text style={styles.dropdownText}>How to Play</Text>
+                </TouchableOpacity>
+
+              </View>
+            </TouchableOpacity>
+          )}
+
+
         <View style={styles.container}>
+
           <Text style={styles.turnText}>
-            Your move: <Text style={{ color: turn === 'X' ? xColor : oColor }}>{turn}</Text>
+            Your move:{' '}
+            <Text style={{ color: turn === 'X' ? xColor : oColor }}>{turn}</Text>
           </Text>
 
           <View style={styles.board}>
@@ -63,14 +148,54 @@ const TicTacToe = () => {
               const tileColor = board[i] === playerOne ? xColor : oColor;
 
               return (
-                <TouchableOpacity key={i} style={style} onPress={() => tilePress(i)}>
+
+                <TouchableOpacity
+                  key={i}
+                  style={style}
+                  onPress={() => tilePress(i)}
+                >
                   <Text style={[styles.tileText, { color: tileColor }]}>
                     {board[i]}
                   </Text>
                 </TouchableOpacity>
+
               );
             })}
           </View>
+
+          <Modal transparent={true} visible={modalVisible} animationType="fade">
+            <View style={styles.modalOverlay}>
+              <View style={styles.modalBox}>
+                <TouchableOpacity
+                  onPress={() => setModalVisible(false)}
+                  style={styles.closeButton}
+                >
+                  <Ionicons name="close-circle" size={32} color="#ff6b6b" />
+                </TouchableOpacity>
+
+                <Text style={styles.modalText}>{modalMessage}</Text>
+
+                <TouchableOpacity
+                  style={[styles.modalActionButton, { backgroundColor: '#4ecdc4' }]}
+                  onPress={handleReset}
+                >
+                  <Text style={styles.modalActionText}>Play Again</Text>
+                </TouchableOpacity>
+
+                <TouchableOpacity
+                  style={[styles.modalActionButton, { backgroundColor: '#ffa69e' }]}
+                  onPress={() => {
+                    setModalVisible(false);
+                    navigation.goBack();
+                  }}
+                >
+                  <Text style={styles.modalActionText}>Home</Text>
+                </TouchableOpacity>
+              </View>
+            </View>
+          </Modal>
+
+
         </View>
       </SafeAreaView>
     </SafeAreaProvider>
@@ -129,6 +254,93 @@ const styles = StyleSheet.create({
   tileText: {
     fontSize: 48,
     fontWeight: '700',
+  },
+  modalOverlay: {
+    position: 'absolute',
+    top: 0,
+    left: 0,
+    right: 0,
+    bottom: 0,
+    backgroundColor: 'rgba(255, 250, 249, 0.9)',
+    justifyContent: 'center',
+    alignItems: 'center',
+    paddingHorizontal: 24,
+  },
+  modalBox: {
+    backgroundColor: '#fffefc',
+    borderRadius: 28,
+    paddingVertical: 36,
+    paddingHorizontal: 28,
+    width: '88%',
+    alignItems: 'center',
+    borderColor: '#f4d6d6',
+    borderWidth: 2,
+    shadowColor: '#000',
+    shadowOffset: { width: 0, height: 4 },
+    shadowOpacity: 0.1,
+    shadowRadius: 10,
+    elevation: 8,
+    transform: [{ scale: 1.02 }],
+  },
+  modalText: {
+    fontSize: 26,
+    fontWeight: '800',
+    color: '#333',
+    textAlign: 'center',
+    marginBottom: 24,
+    letterSpacing: 0.4,
+  },
+  modalActionButton: {
+    paddingVertical: 12,
+    paddingHorizontal: 32,
+    borderRadius: 14,
+    marginTop: 10,
+    width: '80%',
+    alignItems: 'center',
+  },
+  modalActionText: {
+    color: '#fff',
+    fontSize: 17,
+    fontWeight: '700',
+  },
+  closeButton: {
+    position: 'absolute',
+    top: 14,
+    right: 14,
+    zIndex: 1,
+  },
+  dropdown: {
+    position: 'absolute',
+    top: 56,
+    right: 16,
+    backgroundColor: '#fffdfc',
+    borderWidth: 1,
+    borderColor: '#f0e0dc',
+    borderRadius: 12,
+    paddingVertical: 8,
+    zIndex: 10,
+    shadowColor: '#000',
+    shadowOffset: { width: 0, height: 4 },
+    shadowOpacity: 0.06,
+    shadowRadius: 8,
+    elevation: 6,
+  },
+  dropdownItem: {
+    paddingVertical: 12,
+    paddingHorizontal: 20,
+  },
+  dropdownText: {
+    fontSize: 16,
+    color: '#555',
+    fontWeight: '500',
+  },
+  dropdownOverlay: {
+    position: 'absolute',
+    top: 0,
+    bottom: 0,
+    left: 0,
+    right: 0,
+    zIndex: 9, // less than dropdown zIndex so dropdown is clickable
   },
 });
 
