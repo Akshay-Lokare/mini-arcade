@@ -17,8 +17,8 @@ const Home = ({ navigation }) => {
             <Text style={styles.gameText}>Tic Tac Toe</Text>
           </TouchableOpacity>
 
-          <TouchableOpacity style={styles.game}>
-            <Text style={styles.gameText}>Coming Soon</Text>
+          <TouchableOpacity style={styles.game} onPress={() => navigation.navigate('MemoryGame')}>
+            <Text style={styles.gameText}>Memory Game</Text>
           </TouchableOpacity>
           
         </View>

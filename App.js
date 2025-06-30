@@ -7,6 +7,7 @@ import { View, Text, Button, StyleSheet } from 'react-native';
 import Home from './screens/Home';
 import TicTacToe from './screens/games/TicTacToe';
 import Snake from './screens/games/Snake';
+import MemoryGame from './screens/games/MemoryGame';
 
 const Stack = createStackNavigator();
 
@@ -21,6 +22,7 @@ export default function App() {
           <Stack.Screen name="Home" component={Home} options={{ headerShown: false }}/>
           <Stack.Screen name="Snake" component={Snake} options={{ headerShown: false }}/>
           <Stack.Screen name="TicTacToe" component={TicTacToe} options={{ headerShown: false }}/>
+          <Stack.Screen name="MemoryGame" component={MemoryGame} options={{ headerShown: false }}/>
 
         </Stack.Navigator>
       </NavigationContainer>
