@@ -88,6 +88,7 @@ const TicTacToe = () => {
     <SafeAreaProvider>
       <SafeAreaView style={{ flex: 1 }}>
         <View style={styles.header}>
+          
           <TouchableOpacity onPress={() => navigation.goBack()}>
             <Ionicons name="chevron-back" size={22} color="#888" />
           </TouchableOpacity>
