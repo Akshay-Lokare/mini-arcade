@@ -8,6 +8,7 @@ import Home from './screens/Home';
 import TicTacToe from './screens/games/TicTacToe';
 import Snake from './screens/games/Snake';
 import MemoryGame from './screens/games/MemoryGame';
+import RPS from './screens/games/RPS';
 
 const Stack = createStackNavigator();
 
@@ -23,6 +24,7 @@ export default function App() {
           <Stack.Screen name="Snake" component={Snake} options={{ headerShown: false }}/>
           <Stack.Screen name="TicTacToe" component={TicTacToe} options={{ headerShown: false }}/>
           <Stack.Screen name="MemoryGame" component={MemoryGame} options={{ headerShown: false }}/>
+          <Stack.Screen name="RPS" component={RPS} options={{ headerShown: false }}/>
 
         </Stack.Navigator>
       </NavigationContainer>

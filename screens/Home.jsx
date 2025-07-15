@@ -20,6 +20,10 @@ const Home = ({ navigation }) => {
           <TouchableOpacity style={styles.game} onPress={() => navigation.navigate('MemoryGame')}>
             <Text style={styles.gameText}>Memory Game</Text>
           </TouchableOpacity>
+
+          <TouchableOpacity style={styles.game} onPress={() => navigation.navigate('RPS')}>
+            <Text style={styles.gameText}>Rock Paper Scissors</Text>
+          </TouchableOpacity>
           
         </View>
       </SafeAreaView>
