@@ -27,6 +27,8 @@ const Snake = () => {
   const [gameStarted, setGameStarted] = useState(false);
   const [showModal, setShowModal] = useState(false);
   const [showDropdown, setShowDropdown] = useState(false);
+  const [modalMessage, setModalMessage] = useState('');
+  const [modalVisible, setModalVisible] = useState(false);
 
   const navigation = useNavigation();
   const moveInterval = useRef(null);
@@ -156,15 +158,21 @@ const Snake = () => {
   const handleOption = (option) => {
     setShowDropdown(false);
     if (option === 'Reset Game') handleStart();
+    if (option === 'Help') {
+      setModalMessage("Eat the fruit. Avoid hitting the walls and yourself!");
+      setModalVisible(true);
+    }
   };
 
   return (
     <SafeAreaProvider>
       <SafeAreaView style={{ flex: 1 }}>
+
         <View style={styles.header}>
           <TouchableOpacity onPress={() => navigation.goBack()}>
             <Ionicons name="chevron-back" size={22} color="#888" />
           </TouchableOpacity>
+
           <Text style={styles.headerTitle}>Snake</Text>
           <TouchableOpacity onPress={() => setShowDropdown(!showDropdown)}>
             <Ionicons name="ellipsis-horizontal" size={20} color="#888" />
@@ -178,12 +186,21 @@ const Snake = () => {
             onPress={() => setShowDropdown(false)}
           >
             <View style={styles.dropdown}>
+
+              <TouchableOpacity
+                style={styles.dropdownItem}
+                onPress={() => handleOption('Help')}
+              >
+                <Text style={styles.dropdownText}>Help</Text>
+              </TouchableOpacity>
+
               <TouchableOpacity
                 style={styles.dropdownItem}
                 onPress={() => handleOption('Reset Game')}
               >
                 <Text style={styles.dropdownText}>Reset Game</Text>
               </TouchableOpacity>
+
             </View>
           </TouchableOpacity>
         )}
@@ -223,19 +240,35 @@ const Snake = () => {
           </View>
         </View>
 
-        <Modal transparent={true} visible={showModal} animationType="fade">
-          <View style={styles.modalOverlay}>
-            <View style={styles.modalBox}>
-              <Text style={styles.modalText}>Game Over!</Text>
-              <TouchableOpacity
-                onPress={handleStart}
-                style={[styles.modalActionButton, { backgroundColor: '#27ae60' }]}
-              >
-                <Text style={styles.modalActionText}>Play Again</Text>
-              </TouchableOpacity>
+          <Modal transparent={true} visible={modalVisible} animationType="fade">
+            <View style={styles.modalOverlay}>
+              <View style={styles.modalBox}>
+                <TouchableOpacity onPress={() => setModalVisible(false)} style={styles.closeButton}>
+                  <Ionicons name="close-circle" size={32} color="#ff6b6b" />
+                </TouchableOpacity>
+
+                <Text style={styles.modalText}>{modalMessage}</Text>
+
+                <TouchableOpacity
+                  style={[styles.modalActionButton, { backgroundColor: '#4ecdc4' }]}
+                  onPress={handleStart}
+                >
+                  <Text style={styles.modalActionText}>Play Again</Text>
+                </TouchableOpacity>
+
+                <TouchableOpacity
+                  style={[styles.modalActionButton, { backgroundColor: '#ffa69e' }]}
+                  onPress={() => {
+                    setModalVisible(false);
+                    navigation.goBack();
+                  }}
+                >
+                  <Text style={styles.modalActionText}>Home</Text>
+                </TouchableOpacity>
+              </View>
             </View>
-          </View>
-        </Modal>
+          </Modal>
+
       </SafeAreaView>
     </SafeAreaProvider>
   );

@@ -78,7 +78,7 @@ const TicTacToe = () => {
   const handleOptionPress = (option) => {
     setShowDropdownsBtns(false);
     if (option === 'Reset Game') handleReset();
-    if (option === 'How to Play') {
+    if (option === 'Help') {
       setModalMessage("Tap a tile to place your mark. First to align 3 wins!");
       setModalVisible(true);
     }
@@ -87,6 +87,7 @@ const TicTacToe = () => {
   return (
     <SafeAreaProvider>
       <SafeAreaView style={{ flex: 1 }}>
+
         <View style={styles.header}>
           
           <TouchableOpacity onPress={() => navigation.goBack()}>
@@ -114,22 +115,21 @@ const TicTacToe = () => {
 
                 <TouchableOpacity
                   style={styles.dropdownItem}
+                  onPress={() => handleOptionPress('Help')}
+                >
+                  <Text style={styles.dropdownText}>Help</Text>
+                </TouchableOpacity>
+
+                <TouchableOpacity
+                  style={styles.dropdownItem}
                   onPress={() => handleOptionPress('Reset Game')}
                 >
                   <Text style={styles.dropdownText}>Reset Game</Text>
                 </TouchableOpacity>
 
-                <TouchableOpacity
-                  style={styles.dropdownItem}
-                  onPress={() => handleOptionPress('How to Play')}
-                >
-                  <Text style={styles.dropdownText}>How to Play</Text>
-                </TouchableOpacity>
-
               </View>
             </TouchableOpacity>
           )}
-
 
         <View style={styles.container}>
 

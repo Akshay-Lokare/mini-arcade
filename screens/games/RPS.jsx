@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState } from 'react';
 import {
   View,
   Text,
@@ -15,24 +15,18 @@ import { useNavigation } from '@react-navigation/native';
 const RPS = () => {
   const navigation = useNavigation();
 
-  const [mode, setMode] = useState(null);
-  const [rps] = useState([
+  const rps = [
     { id: "rock", value: "rock" },
     { id: "paper", value: "paper" },
     { id: "scissor", value: "scissor" },
-  ]);
+  ];
 
   const [userRps, setUserRps] = useState({ id: '', value: '' });
   const [compRps, setCompRps] = useState({ id: '', value: '' });
 
   const [modalVisible, setModalVisible] = useState(false);
   const [modalMessage, setModalMessage] = useState('');
-
-  useEffect(() => {
-    if (mode === '1P') console.log('1 Player mode selected');
-    else if (mode === '2P') console.log('2 Players mode selected');
-    else console.log('Select Mode');
-  }, [mode]);
+  const [showDropdownBtns, setShowDropdownsBtns] = useState(false);
 
   const playerOneGamePlay = (choice) => {
     const selected = { id: choice, value: choice };
@@ -40,9 +34,6 @@ const RPS = () => {
 
     const item = rps[Math.floor(Math.random() * rps.length)];
     setCompRps(item);
-
-    console.log(`User chose: ${selected.value}`);
-    console.log(`Computer chose: ${item.value}`);
 
     if (selected.id === item.id) {
       setModalMessage("It's a Draw!");
@@ -72,75 +63,99 @@ const RPS = () => {
     setModalVisible(false);
   };
 
+  const handleOptionPress = (option) => {
+    setShowDropdownsBtns(false);
+    if (option === 'Reset Game') handleReset();
+    if (option === 'How to Play') {
+      setModalMessage("Beat the computer by picking the dominating option!");
+      setModalVisible(true);
+    }
+  };
+
+
   return (
     <SafeAreaProvider>
       <SafeAreaView style={styles.container}>
-        {/* Header */}
+
         <View style={styles.header}>
+          
           <TouchableOpacity onPress={() => navigation.goBack()}>
-            <Ionicons name="chevron-back" size={24} color="#555" />
+            <Ionicons name="chevron-back" size={22} color="#888" />
           </TouchableOpacity>
-          <Text style={styles.title}>Rock Paper Scissors</Text>
-          <View style={{ width: 24 }} />
+
+          <Text style={styles.headerTitle}>Tic Tac Toe</Text>
+
+          <TouchableOpacity
+            style={styles.dropdownToggle}
+            onPress={() => setShowDropdownsBtns(!showDropdownBtns)}
+          >
+            <Ionicons name="ellipsis-horizontal" size={20} color="#888" />
+          </TouchableOpacity>
         </View>
 
-        <View style={styles.gameArea}>
-          {mode === null ? (
-            <>
-              <TouchableOpacity style={styles.modeButton} onPress={() => setMode('1P')}>
-                <Text style={styles.modeButtonText}>1 Player</Text>
-              </TouchableOpacity>
+          {showDropdownBtns && (
+            <TouchableOpacity
+              activeOpacity={1}
+              style={styles.dropdownOverlay}
+              onPress={() => setShowDropdownsBtns(false)}
+            >
 
-              <TouchableOpacity style={styles.modeButton} onPress={() => setMode('2P')}>
-                <Text style={styles.modeButtonText}>2 Players</Text>
-              </TouchableOpacity>
-            </>
+              <View style={styles.dropdown}>
 
-          ) : mode === '1P' ? (
-            <View style={styles.onePlayerContainer}>
-              {/* Computer's Option */}
-              <View style={styles.compOption}>
-                <View style={styles.compOptionContent}>
-
-                  {compRps.id !== '' ? (
-                    <FontAwesome5 name={getIcon(compRps.id)} size={50} color="#d25c5c" />
-                  ) : (
-                    <Text style={styles.compText}>Computer is waiting...</Text>
-                  )}
-
-                </View>
-              </View>
-
-              <View style={styles.optionsRow}>
-
-                <TouchableOpacity style={styles.optionCard} onPress={() => playerOneGamePlay("rock")}>
-                  <FontAwesome5 name="hand-rock" size={32} color="#444" />
+                <TouchableOpacity
+                  style={styles.dropdownItem}
+                  onPress={() => handleOptionPress('Reset Game')}
+                >
+                  <Text style={styles.dropdownText}>Reset Game</Text>
                 </TouchableOpacity>
 
-                <TouchableOpacity style={styles.optionCard} onPress={() => playerOneGamePlay("paper")}>
-                  <FontAwesome5 name="hand-paper" size={32} color="#444" />
-                </TouchableOpacity>
-
-                <TouchableOpacity style={styles.optionCard} onPress={() => playerOneGamePlay("scissor")}>
-                  <FontAwesome5 name="hand-scissors" size={32} color="#444" />
+                <TouchableOpacity
+                  style={styles.dropdownItem}
+                  onPress={() => handleOptionPress('How to Play')}
+                >
+                  <Text style={styles.dropdownText}>How to Play</Text>
                 </TouchableOpacity>
 
               </View>
-
-              <View style={{ marginTop: 30, alignItems: 'center' }}>
-
-                <Text style={styles.yourOptionText}>Your Option:</Text>
-
-                {userRps.id !== '' && (
-                  <FontAwesome5 name={getIcon(userRps.id)} size={50} color="#d25c5c" />
-                )}
-
-              </View>
-            </View>
-          ) : (
-            <Text style={styles.infoText}>You selected 2 Players Mode</Text>
+            </TouchableOpacity>
           )}
 
+        <View style={styles.gameArea}>
+          <View style={styles.onePlayerContainer}>
+            {/* Computer's Option */}
+            <View style={styles.compOption}>
+              <View style={styles.compOptionContent}>
+                {compRps.id !== '' ? (
+                  <FontAwesome5 name={getIcon(compRps.id)} size={50} color="#d25c5c" />
+                ) : (
+                  <Text style={styles.compText}>Computer is waiting...</Text>
+                )}
+              </View>
+            </View>
+
+            {/* Buttons */}
+            <View style={styles.optionsRow}>
+              <TouchableOpacity style={styles.optionCard} onPress={() => playerOneGamePlay("rock")}>
+                <FontAwesome5 name="hand-rock" size={32} color="#444" />
+              </TouchableOpacity>
+
+              <TouchableOpacity style={styles.optionCard} onPress={() => playerOneGamePlay("paper")}>
+                <FontAwesome5 name="hand-paper" size={32} color="#444" />
+              </TouchableOpacity>
+
+              <TouchableOpacity style={styles.optionCard} onPress={() => playerOneGamePlay("scissor")}>
+                <FontAwesome5 name="hand-scissors" size={32} color="#444" />
+              </TouchableOpacity>
+            </View>
+
+            {/* User Option */}
+            <View style={{ marginTop: 30, alignItems: 'center' }}>
+              <Text style={styles.yourOptionText}>Your Option:</Text>
+              {userRps.id !== '' && (
+                <FontAwesome5 name={getIcon(userRps.id)} size={50} color="#d25c5c" />
+              )}
+            </View>
+          </View>
 
           {/* Modal */}
           <Modal transparent={true} visible={modalVisible} animationType="fade">
@@ -169,9 +184,9 @@ const RPS = () => {
                   <Text style={styles.modalActionText}>Home</Text>
                 </TouchableOpacity>
               </View>
-              
             </View>
           </Modal>
+          
         </View>
       </SafeAreaView>
     </SafeAreaProvider>
@@ -184,38 +199,26 @@ const styles = StyleSheet.create({
     backgroundColor: '#fef7f5',
   },
   header: {
-    paddingTop: 14,
-    paddingBottom: 16,
-    paddingHorizontal: 18,
-    backgroundColor: '#ffe3e3',
     flexDirection: 'row',
     alignItems: 'center',
     justifyContent: 'space-between',
-    elevation: 3,
+    paddingHorizontal: 16,
+    paddingTop: 8,
+    paddingBottom: 12,
+    backgroundColor: '#fff0f0',
   },
-  title: {
+  headerTitle: {
     fontSize: 22,
-    fontWeight: 'bold',
-    color: '#d25c5c',
+    fontWeight: '700',
+    color: '#e76f51',
+    textAlign: 'center',
+    flex: 1,
   },
   gameArea: {
     flex: 1,
     alignItems: 'center',
     paddingHorizontal: 20,
     paddingTop: 40,
-  },
-  modeButton: {
-    backgroundColor: '#ffdada',
-    paddingVertical: 16,
-    paddingHorizontal: 50,
-    borderRadius: 16,
-    marginVertical: 14,
-    elevation: 4,
-  },
-  modeButtonText: {
-    fontSize: 18,
-    fontWeight: '600',
-    color: '#8b2e2e',
   },
   onePlayerContainer: {
     width: '100%',
@@ -267,11 +270,6 @@ const styles = StyleSheet.create({
     color: '#444',
     marginBottom: 12,
     textAlign: 'center',
-  },
-  infoText: {
-    fontSize: 18,
-    color: '#555',
-    marginTop: 30,
   },
   modalOverlay: {
     position: 'absolute',
@@ -326,6 +324,39 @@ const styles = StyleSheet.create({
     top: 14,
     right: 14,
     zIndex: 1,
+  },
+  dropdown: {
+    position: 'absolute',
+    top: 56,
+    right: 16,
+    backgroundColor: '#fffdfc',
+    borderWidth: 1,
+    borderColor: '#f0e0dc',
+    borderRadius: 12,
+    paddingVertical: 8,
+    zIndex: 10,
+    shadowColor: '#000',
+    shadowOffset: { width: 0, height: 4 },
+    shadowOpacity: 0.06,
+    shadowRadius: 8,
+    elevation: 6,
+  },
+  dropdownItem: {
+    paddingVertical: 12,
+    paddingHorizontal: 20,
+  },
+  dropdownText: {
+    fontSize: 16,
+    color: '#555',
+    fontWeight: '500',
+  },
+  dropdownOverlay: {
+    position: 'absolute',
+    top: 0,
+    bottom: 0,
+    left: 0,
+    right: 0,
+    zIndex: 9, // less than dropdown zIndex so dropdown is clickable
   },
 });
 

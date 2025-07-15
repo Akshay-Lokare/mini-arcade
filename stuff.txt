@@ -1,0 +1,7 @@
+1. Add score board
+2. clean the codes (add reuseable functions in a helper function and import in other files) eg: handleOptionPress, modal etc
+3. try using more hooks
+
+Game specific:
+1. add number of flips in memory game
+2. 

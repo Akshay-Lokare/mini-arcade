@@ -137,17 +137,24 @@ const MemoryGame = () => {
   const [showDropdownBtns, setShowDropdownBtns] = useState(false);
   const [modalVisible, setModalVisible] = useState(false);
   const [modalMessage, setModalMessage] = useState('');
-  const [cards] = useState(generateShuffledCards());
+  const [cards, setCards] = useState(generateShuffledCards());
 
   const [flippedCards, setFlippedCards] = useState([]); // cards currently flipped
   const [matchedCards, setMatchedCards] = useState([]); // cards already matched
-  const [isBusy, setIsBusy] = useState(false); // lock board when comparing
+  const [isBusy, setIsBusy] = useState(false); // lock board when comparing  
 
   const navigation = useNavigation();
 
-  // Handle Help option in dropdown
+  const handleReset = () => {
+    setFlippedCards([]);
+    setMatchedCards([]);
+    setCards(generateShuffledCards());
+  }
+
   const handleOptionPress = (option) => {
     setShowDropdownBtns(false);
+
+    if (option == 'Reset Game') handleReset();
     if (option === 'Help') {
       setModalMessage('Select identical cards to win the game!');
       setModalVisible(true);
@@ -185,12 +192,14 @@ const MemoryGame = () => {
   return (
     <SafeAreaProvider>
       <SafeAreaView style={{ flex: 1 }}>
-        {/* Header */}
+
         <View style={styles.header}>
           <TouchableOpacity onPress={() => navigation.goBack()}>
             <Ionicons name="chevron-back" size={22} color="#888" />
           </TouchableOpacity>
+          
           <Text style={styles.headerTitle}>Memory Game</Text>
+
           <TouchableOpacity
             style={styles.dropdownToggle}
             onPress={() => setShowDropdownBtns(!showDropdownBtns)}
@@ -199,7 +208,6 @@ const MemoryGame = () => {
           </TouchableOpacity>
         </View>
 
-        {/* Dropdown menu */}
         {showDropdownBtns && (
           <TouchableOpacity
             activeOpacity={1}
@@ -212,6 +220,13 @@ const MemoryGame = () => {
                 onPress={() => handleOptionPress('Help')}
               >
                 <Text style={styles.dropdownText}>Help</Text>
+              </TouchableOpacity>
+
+              <TouchableOpacity
+                style={styles.dropdownItem}
+                onPress={() => handleOptionPress('Reset Game')}
+              >
+                <Text style={styles.dropdownText}>Reset Game</Text>
               </TouchableOpacity>
             </View>
           </TouchableOpacity>
