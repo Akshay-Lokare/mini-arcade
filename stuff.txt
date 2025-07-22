@@ -3,5 +3,5 @@
 3. try using more hooks
 
 Game specific:
-1. add number of flips in memory game
-2. 
+1. add number of flips and time in memory game
+2. use os and apply vibration effect

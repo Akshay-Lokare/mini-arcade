@@ -1,4 +1,4 @@
-import React, { useRef, useState, useEffect } from 'react';
+import React, { useState, useEffect, useRef } from "react";
 import {
   View,
   Text,
@@ -8,29 +8,24 @@ import {
   Animated,
   Image,
   TouchableWithoutFeedback,
-} from 'react-native';
-import { SafeAreaView, SafeAreaProvider } from 'react-native-safe-area-context';
-import Ionicons from 'react-native-vector-icons/Ionicons';
-import { useNavigation } from '@react-navigation/native';
+} from "react-native";
+import { SafeAreaView, SafeAreaProvider } from "react-native-safe-area-context";
+import Ionicons from "react-native-vector-icons/Ionicons";
+import { useNavigation } from "@react-navigation/native";
+import { useSelector, useDispatch } from "react-redux";
+import { updateMemoryScore } from "../../redux/scoreSlice";
 
-// Each card component with flip animation
 const FlipCard = ({ card, isFlipped, isMatched, onFlip }) => {
-  // Setup flip animation with initial value depending on flipped/matched status
   const flipAnim = useRef(new Animated.Value(isFlipped || isMatched ? 180 : 0)).current;
-
-  // Interpolate for front side rotation
   const frontInterpolate = flipAnim.interpolate({
     inputRange: [0, 180],
-    outputRange: ['0deg', '180deg'],
+    outputRange: ["0deg", "180deg"],
   });
-
-  // Interpolate for back side rotation
   const backInterpolate = flipAnim.interpolate({
     inputRange: [0, 180],
-    outputRange: ['180deg', '360deg'],
+    outputRange: ["180deg", "360deg"],
   });
 
-  // Animate card based on isFlipped or isMatched props
   useEffect(() => {
     Animated.spring(flipAnim, {
       toValue: isFlipped || isMatched ? 180 : 0,
@@ -39,24 +34,22 @@ const FlipCard = ({ card, isFlipped, isMatched, onFlip }) => {
     }).start();
   }, [isFlipped, isMatched]);
 
-  // Flip card only if it's not matched or already flipped
   const handleFlip = () => {
     if (!isFlipped && !isMatched) {
-      onFlip(card); // Notify parent to update state
+      onFlip(card);
     }
   };
 
   return (
     <TouchableWithoutFeedback onPress={handleFlip}>
       <View>
-        {/* Back side of the card - actual image revealed after flip */}
         <Animated.View
           style={[
             flipStyles.card,
             {
               transform: [{ rotateY: backInterpolate }],
-              position: 'absolute',
-              backfaceVisibility: 'hidden',
+              position: "absolute",
+              backfaceVisibility: "hidden",
             },
           ]}
         >
@@ -66,19 +59,17 @@ const FlipCard = ({ card, isFlipped, isMatched, onFlip }) => {
             resizeMode="contain"
           />
         </Animated.View>
-
-        {/* Front side - card back (hidden side) */}
         <Animated.View
           style={[
             flipStyles.card,
             {
               transform: [{ rotateY: frontInterpolate }],
-              backfaceVisibility: 'hidden',
+              backfaceVisibility: "hidden",
             },
           ]}
         >
           <Image
-            source={require('../../assets/icon.png')} // use your card back image
+            source={require('../../assets/icon.png')}
             style={flipStyles.cardImage}
             resizeMode="contain"
           />
@@ -88,27 +79,6 @@ const FlipCard = ({ card, isFlipped, isMatched, onFlip }) => {
   );
 };
 
-// Style for the flip cards
-const flipStyles = StyleSheet.create({
-  card: {
-    width: 90,
-    height: 90,
-    backgroundColor: '#fff',
-    borderColor: '#f2dcdc',
-    borderWidth: 2,
-    borderRadius: 20,
-    alignItems: 'center',
-    justifyContent: 'center',
-    margin: 10,
-    elevation: 4,
-  },
-  cardImage: {
-    width: '80%',
-    height: '80%',
-  },
-});
-
-// Function to generate card pairs and shuffle them
 function generateShuffledCards() {
   const uniqueImages = [
     { id: 1, image: require('../../assets/img1.jpg') },
@@ -116,62 +86,69 @@ function generateShuffledCards() {
     { id: 3, image: require('../../assets/img3.jpg') },
     { id: 4, image: require('../../assets/img4.jpg') },
   ];
-
-  // Create pairs
   const paired = [...uniqueImages, ...uniqueImages];
-
-  // Add unique uid to each card
   const withUID = paired.map((item, index) => ({ ...item, uid: index }));
-
-  // Shuffle cards using Fisher-Yates shuffle
   for (let i = withUID.length - 1; i > 0; i--) {
     const j = Math.floor(Math.random() * (i + 1));
     [withUID[i], withUID[j]] = [withUID[j], withUID[i]];
   }
-
   return withUID;
 }
 
-// Main Game Component
 const MemoryGame = () => {
-  const [showDropdownBtns, setShowDropdownBtns] = useState(false);
+  const navigation = useNavigation();
+  const dispatch = useDispatch();
+  const highScore = useSelector((state) => state.scores.memory);
+
+  const [cards, setCards] = useState(generateShuffledCards());
+  const [flippedCards, setFlippedCards] = useState([]);
+  const [matchedCards, setMatchedCards] = useState([]);
+  const [isBusy, setIsBusy] = useState(false); // Prevent double taps during animation
+
+  const [isGameActive, setIsGameActive] = useState(false);
+  const [gameStartTime, setGameStartTime] = useState(null);
+  const [elapsedSeconds, setElapsedSeconds] = useState(0);
+
   const [modalVisible, setModalVisible] = useState(false);
   const [modalMessage, setModalMessage] = useState('');
-  const [cards, setCards] = useState(generateShuffledCards());
+  const [showDropdownBtns, setShowDropdownBtns] = useState(false);
 
-  const [flippedCards, setFlippedCards] = useState([]); // cards currently flipped
-  const [matchedCards, setMatchedCards] = useState([]); // cards already matched
-  const [isBusy, setIsBusy] = useState(false); // lock board when comparing  
-
-  const navigation = useNavigation();
-
+  // Reset game
   const handleReset = () => {
     setFlippedCards([]);
     setMatchedCards([]);
     setCards(generateShuffledCards());
-  }
+    setIsGameActive(false);
+    setElapsedSeconds(0);
+    setGameStartTime(null);
+  };
 
   const handleOptionPress = (option) => {
     setShowDropdownBtns(false);
-
-    if (option == 'Reset Game') handleReset();
+    if (option === 'Reset Game') handleReset();
     if (option === 'Help') {
       setModalMessage('Select identical cards to win the game!');
       setModalVisible(true);
     }
   };
 
-  // Main game logic: handle a card flip
+
   const handleCardFlip = (card) => {
     if (isBusy || flippedCards.includes(card.uid) || matchedCards.includes(card.uid)) return;
+
+
+    if (!isGameActive) {
+      setIsGameActive(true);
+      setGameStartTime(Date.now());
+      setElapsedSeconds(0);
+    }
 
     const newFlipped = [...flippedCards, card.uid];
     setFlippedCards(newFlipped);
 
-    // When 2 cards are flipped, check if they match
+
     if (newFlipped.length === 2) {
       setIsBusy(true);
-
       const [first, second] = newFlipped;
       const firstCard = cards.find((c) => c.uid === first);
       const secondCard = cards.find((c) => c.uid === second);
@@ -179,9 +156,17 @@ const MemoryGame = () => {
       if (firstCard.id === secondCard.id) {
         // Match found
         setMatchedCards((prev) => [...prev, first, second]);
+        // Check if all pairs are matched
+        if (matchedCards.length + 2 === cards.length) {
+          setIsGameActive(false);
+          const finalTime = Math.floor((Date.now() - gameStartTime) / 1000);
+
+          dispatch(updateMemoryScore(finalTime));
+          setModalMessage(`You won in ${Math.floor(finalTime/60)}:${('0'+finalTime%60).slice(-2)}!`);
+          setModalVisible(true);
+        }
       }
 
-      // Reset flipped state after delay
       setTimeout(() => {
         setFlippedCards([]);
         setIsBusy(false);
@@ -189,11 +174,28 @@ const MemoryGame = () => {
     }
   };
 
+  useEffect(() => {
+    let interval;
+    if (isGameActive) {
+      interval = setInterval(() => {
+        setElapsedSeconds(Math.floor((Date.now() - gameStartTime) / 1000));
+      }, 1000);
+    }
+    return () => clearInterval(interval);
+  }, [isGameActive, gameStartTime]);
+
+  // Format seconds as MM:SS
+  const formatTime = (seconds) => {
+    return seconds === 0 
+      ? '0:00' 
+      : `${Math.floor(seconds/60)}:${('0'+(seconds%60)).slice(-2)}`;
+  };
+
   return (
     <SafeAreaProvider>
       <SafeAreaView style={{ flex: 1 }}>
-
         <View style={styles.header}>
+
           <TouchableOpacity onPress={() => navigation.goBack()}>
             <Ionicons name="chevron-back" size={22} color="#888" />
           </TouchableOpacity>
@@ -208,6 +210,10 @@ const MemoryGame = () => {
           </TouchableOpacity>
         </View>
 
+        <Text style={styles.infoText}>
+          Time: {formatTime(elapsedSeconds)} | Best: {formatTime(highScore || 0)}
+        </Text>
+
         {showDropdownBtns && (
           <TouchableOpacity
             activeOpacity={1}
@@ -215,6 +221,7 @@ const MemoryGame = () => {
             onPress={() => setShowDropdownBtns(false)}
           >
             <View style={styles.dropdown}>
+
               <TouchableOpacity
                 style={styles.dropdownItem}
                 onPress={() => handleOptionPress('Help')}
@@ -228,13 +235,15 @@ const MemoryGame = () => {
               >
                 <Text style={styles.dropdownText}>Reset Game</Text>
               </TouchableOpacity>
+
             </View>
           </TouchableOpacity>
         )}
 
-        {/* Cards grid */}
+
         <View style={styles.cardsWrapper}>
           <View style={styles.cardsContainer}>
+
             {cards.map((card) => (
               <FlipCard
                 key={card.uid}
@@ -244,6 +253,7 @@ const MemoryGame = () => {
                 onFlip={handleCardFlip}
               />
             ))}
+
           </View>
         </View>
 
@@ -251,19 +261,24 @@ const MemoryGame = () => {
         <Modal transparent={true} visible={modalVisible} animationType="fade">
           <View style={styles.modalOverlay}>
             <View style={styles.modalBox}>
+
               <TouchableOpacity
                 onPress={() => setModalVisible(false)}
                 style={styles.closeButton}
               >
+
                 <Ionicons name="close-circle" size={32} color="#ff6b6b" />
+
               </TouchableOpacity>
               <Text style={styles.modalText}>{modalMessage}</Text>
+
               <TouchableOpacity
                 style={[styles.modalActionButton, { backgroundColor: '#4ecdc4' }]}
                 onPress={() => setModalVisible(false)}
               >
                 <Text style={styles.modalActionText}>Close</Text>
               </TouchableOpacity>
+
             </View>
           </View>
         </Modal>
@@ -272,7 +287,7 @@ const MemoryGame = () => {
   );
 };
 
-// Styles for the entire app
+
 const styles = StyleSheet.create({
   header: {
     flexDirection: 'row',
@@ -289,6 +304,14 @@ const styles = StyleSheet.create({
     color: '#e76f51',
     textAlign: 'center',
     flex: 1,
+  },
+  infoText: {
+    fontSize: 18,
+    fontWeight: '600',
+    textAlign: 'center',
+    marginTop: 5,
+    marginBottom: 5,
+    color: '#333',
   },
   cardsWrapper: {
     flex: 1,
@@ -377,6 +400,25 @@ const styles = StyleSheet.create({
     top: 14,
     right: 14,
     zIndex: 1,
+  },
+});
+
+const flipStyles = StyleSheet.create({
+  card: {
+    width: 90,
+    height: 90,
+    backgroundColor: '#fff',
+    borderColor: '#f2dcdc',
+    borderWidth: 2,
+    borderRadius: 20,
+    alignItems: 'center',
+    justifyContent: 'center',
+    margin: 10,
+    elevation: 4,
+  },
+  cardImage: {
+    width: '80%',
+    height: '80%',
   },
 });
 

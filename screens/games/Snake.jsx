@@ -1,4 +1,7 @@
 import React, { useEffect, useRef, useState } from 'react';
+import { useDispatch, useSelector } from 'react-redux';
+import { useNavigation } from '@react-navigation/native';
+
 import {
   View,
   Text,
@@ -9,31 +12,63 @@ import {
   PanResponder,
   Animated,
 } from 'react-native';
+
 import { SafeAreaView, SafeAreaProvider } from 'react-native-safe-area-context';
 import Ionicons from 'react-native-vector-icons/Ionicons';
-import { useNavigation } from '@react-navigation/native';
+import { updateSnakeScore } from '../../redux/scoreSlice';
 
 const CELL_SIZE = 20;
 const SCREEN_WIDTH = Dimensions.get('window').width;
 const SCREEN_HEIGHT = Dimensions.get('window').height;
+const BOARD_HEIGHT = SCREEN_HEIGHT - 150;
 const NUM_COLUMNS = Math.floor(SCREEN_WIDTH / CELL_SIZE);
-const NUM_ROWS = Math.floor((SCREEN_HEIGHT - 100) / CELL_SIZE);
+const NUM_ROWS = Math.floor(BOARD_HEIGHT / CELL_SIZE);
 
 const Snake = () => {
+  const dispatch = useDispatch();
+  // Get the high score from Redux state
+  const highScore = useSelector((state) => state.scores.snake);
+
+  // State for the current game's score
+  const [currentScore, setCurrentScore] = useState(0);
+
   const [snake, setSnake] = useState([{ x: 5, y: 5 }, { x: 5, y: 6 }]);
+  const snakeRef = useRef(snake); // Ref to hold current snake state for interval
+
   const [food, setFood] = useState({ x: 10, y: 10 });
-  const foodRef = useRef(food);
+  const foodRef = useRef(food); // Ref to hold current food state for collision check
+
   const [direction, setDirection] = useState('RIGHT');
+  const directionRef = useRef(direction); // Ref to hold current direction for interval
+
   const [gameStarted, setGameStarted] = useState(false);
-  const [showModal, setShowModal] = useState(false);
   const [showDropdown, setShowDropdown] = useState(false);
   const [modalMessage, setModalMessage] = useState('');
   const [modalVisible, setModalVisible] = useState(false);
 
   const navigation = useNavigation();
   const moveInterval = useRef(null);
-  const directionRef = useRef(direction);
-  const animatedPositionsRef = useRef([]); // NEW: animated positions
+
+  // Use a ref to store Animated.ValueXY instances, keeping it in sync with snake state
+  const animatedPositionsRef = useRef([]);
+
+  // Keep snakeRef updated whenever snake state changes
+  useEffect(() => {
+    snakeRef.current = snake;
+    if (animatedPositionsRef.current.length !== snake.length) {
+      animatedPositionsRef.current = snake.map((segment) =>
+        new Animated.ValueXY({ x: segment.x * CELL_SIZE, y: segment.y * CELL_SIZE })
+      );
+    }
+  }, [snake]);
+
+  useEffect(() => {
+    foodRef.current = food;
+  }, [food]);
+
+  useEffect(() => {
+    directionRef.current = direction;
+  }, [direction]);
 
   const panResponder = useRef(
     PanResponder.create({
@@ -42,19 +77,19 @@ const Snake = () => {
       onPanResponderMove: (e, gesture) => {
         const dir = directionRef.current;
         if (Math.abs(gesture.dx) > Math.abs(gesture.dy)) {
+
+          // Horizontal swipe
           if (gesture.dx > 10 && dir !== 'LEFT') {
-            directionRef.current = 'RIGHT';
             setDirection('RIGHT');
           } else if (gesture.dx < -10 && dir !== 'RIGHT') {
-            directionRef.current = 'LEFT';
             setDirection('LEFT');
           }
+
         } else {
+          // Vertical swipe
           if (gesture.dy > 10 && dir !== 'UP') {
-            directionRef.current = 'DOWN';
             setDirection('DOWN');
           } else if (gesture.dy < -10 && dir !== 'DOWN') {
-            directionRef.current = 'UP';
             setDirection('UP');
           }
         }
@@ -63,49 +98,84 @@ const Snake = () => {
   ).current;
 
   useEffect(() => {
-    directionRef.current = direction;
-  }, [direction]);
-
-  useEffect(() => {
-    foodRef.current = food;
-  }, [food]);
-
-  useEffect(() => {
-    if (!gameStarted) return;
+    if (!gameStarted) {
+      clearInterval(moveInterval.current);
+      return;
+    }
 
     moveInterval.current = setInterval(() => {
-      setSnake((prev) => {
-        const head = prev[0];
-        let newHead;
-        const dir = directionRef.current;
+      // Get the current state values from refs to avoid stale closures
+      const currentSnake = snakeRef.current;
+      const currentFood = foodRef.current;
+      const dir = directionRef.current;
 
-        if (dir === 'RIGHT') newHead = { x: head.x + 1, y: head.y };
-        if (dir === 'LEFT') newHead = { x: head.x - 1, y: head.y };
-        if (dir === 'UP') newHead = { x: head.x, y: head.y - 1 };
-        if (dir === 'DOWN') newHead = { x: head.x, y: head.y + 1 };
+      const head = currentSnake[0];
+      let newHead;
 
-        if (isOutOfBounds(newHead) || isSelfCollision(newHead, prev)) {
-          setGameStarted(false);
-          setShowModal(true);
-          return [{ x: 5, y: 5 }, { x: 5, y: 6 }];
+      // Calculate new head position based on current direction
+      if (dir === 'RIGHT') newHead = { x: head.x + 1, y: head.y };
+      else if (dir === 'LEFT') newHead = { x: head.x - 1, y: head.y };
+      else if (dir === 'UP') newHead = { x: head.x, y: head.y - 1 };
+      else if (dir === 'DOWN') newHead = { x: head.x, y: head.y + 1 };
+
+      let gameEnded = false;
+      let foodEaten = false;
+      let nextSnake;
+      let nextFood = currentFood;
+
+      if (isOutOfBounds(newHead) || isSelfCollision(newHead, currentSnake)) {
+        gameEnded = true;
+        setModalMessage('Game Over! You hit the wall or yourself.');
+      } else {
+        // Check for food collision
+        if (checkFoodCollision(newHead, currentFood)) {
+          foodEaten = true;
+          // Generate new food position, ensuring it's not on the snake
+          let newFoodPos;
+          do {
+            newFoodPos = {
+              x: Math.floor(Math.random() * NUM_COLUMNS),
+              y: Math.floor(Math.random() * NUM_ROWS),
+            };
+          } while (isSelfCollision(newFoodPos, [newHead, ...currentSnake])); // Ensure new food doesn't spawn on the new snake head or body
+          nextFood = newFoodPos;
+          nextSnake = [newHead, ...currentSnake]; // Snake grows
+          setCurrentScore((prevScore) => prevScore + 1);
+        } else {
+          nextSnake = [newHead, ...currentSnake.slice(0, -1)]; // Snake moves without growing
+        }
+      }
+
+      // --- Perform all state updates after calculating the next state ---
+      if (gameEnded) {
+        setGameStarted(false); // Stop the game
+        setModalVisible(true); // Show game over modal
+
+        if (currentScore > highScore) { // Compare currentScore with Redux highScore
+          dispatch(updateSnakeScore(currentScore)); // Dispatch the new high score
         }
 
-        let newSnake;
-        if (checkFoodCollision(newHead)) {
-          const newFood = {
-            x: Math.floor(Math.random() * NUM_COLUMNS),
-            y: Math.floor(Math.random() * NUM_ROWS),
-          };
-          setFood(newFood);
-          newSnake = [newHead, ...prev];
+
+        // Reset snake, food, and direction for the next game
+        setSnake([{ x: 5, y: 5 }, { x: 5, y: 6 }]);
+        setFood({ x: 10, y: 10 });
+        setDirection('RIGHT');
+        // Re-initialize animated positions for the reset snake
+        animatedPositionsRef.current = [{ x: 5, y: 5 }, { x: 5, y: 6 }].map((segment) =>
+          new Animated.ValueXY({ x: segment.x * CELL_SIZE, y: segment.y * CELL_SIZE })
+        );
+        setCurrentScore(0);
+      } else {
+        setSnake(nextSnake);
+
+        if (foodEaten) {
+          setFood(nextFood);
           animatedPositionsRef.current.unshift(
             new Animated.ValueXY({ x: newHead.x * CELL_SIZE, y: newHead.y * CELL_SIZE })
           );
-        } else {
-          newSnake = [newHead, ...prev.slice(0, -1)];
         }
 
-        newSnake.forEach((segment, index) => {
+        nextSnake.forEach((segment, index) => {
           if (!animatedPositionsRef.current[index]) {
             animatedPositionsRef.current[index] = new Animated.ValueXY({
               x: segment.x * CELL_SIZE,
@@ -117,27 +187,29 @@ const Snake = () => {
               x: segment.x * CELL_SIZE,
               y: segment.y * CELL_SIZE,
             },
-            duration: 180,
+            duration: 180, 
             useNativeDriver: false,
           }).start();
         });
-
-        return newSnake;
-      });
-    }, 200);
+      }
+    }, 200); // Game speed (interval in milliseconds)
 
     return () => clearInterval(moveInterval.current);
-  }, [gameStarted]);
+  }, [gameStarted, dispatch, currentScore, highScore]);
 
+  // Helper function to check if snake head is out of board boundaries
   const isOutOfBounds = (head) =>
     head.x < 0 || head.y < 0 || head.x >= NUM_COLUMNS || head.y >= NUM_ROWS;
 
+  // Helper function to check for self-collision (head hitting any part of its body)
   const isSelfCollision = (head, body) =>
-    body.some((segment) => segment.x === head.x && segment.y === head.y);
+    body.some((segment, index) => index !== 0 && segment.x === head.x && segment.y === head.y); // Exclude the head itself from collision check
 
-  const checkFoodCollision = (head) =>
-    head.x === foodRef.current.x && head.y === foodRef.current.y;
+  // Helper function to check if snake head has collided with food
+  const checkFoodCollision = (head, currentFood) =>
+    head.x === currentFood.x && head.y === currentFood.y;
 
+  // Handles starting or restarting the game
   const handleStart = () => {
     const initialSnake = [{ x: 5, y: 5 }, { x: 5, y: 6 }];
     setSnake(initialSnake);
@@ -149,17 +221,19 @@ const Snake = () => {
     );
     const initialFood = { x: 10, y: 10 };
     setFood(initialFood);
-    foodRef.current = initialFood;
     setDirection('RIGHT');
+    setCurrentScore(0); 
     setGameStarted(true);
-    setShowModal(false);
+    setModalVisible(false);
   };
 
   const handleOption = (option) => {
     setShowDropdown(false);
-    if (option === 'Reset Game') handleStart();
+    if (option === 'Reset Game') {
+      handleStart();
+    }
     if (option === 'Help') {
-      setModalMessage("Eat the fruit. Avoid hitting the walls and yourself!");
+      setModalMessage('Eat the fruit. Avoid hitting the walls and yourself!');
       setModalVisible(true);
     }
   };
@@ -179,6 +253,12 @@ const Snake = () => {
           </TouchableOpacity>
         </View>
 
+        <View style={styles.scoreContainer}>
+          <Text style={styles.scoreText}>Current Score: {currentScore}</Text>
+          <Text style={styles.scoreText}>High Score: {highScore}</Text>
+        </View>
+
+
         {showDropdown && (
           <TouchableOpacity
             activeOpacity={1}
@@ -186,7 +266,6 @@ const Snake = () => {
             onPress={() => setShowDropdown(false)}
           >
             <View style={styles.dropdown}>
-
               <TouchableOpacity
                 style={styles.dropdownItem}
                 onPress={() => handleOption('Help')}
@@ -200,7 +279,6 @@ const Snake = () => {
               >
                 <Text style={styles.dropdownText}>Reset Game</Text>
               </TouchableOpacity>
-
             </View>
           </TouchableOpacity>
         )}
@@ -213,62 +291,66 @@ const Snake = () => {
           )}
 
           <View style={styles.board} {...panResponder.panHandlers}>
-            {snake.map((_, index) => (
-              <Animated.View
-                key={index}
-                style={{
-                  position: 'absolute',
-                  width: CELL_SIZE,
-                  height: CELL_SIZE,
-                  backgroundColor: index === 0 ? '#2ecc71' : '#27ae60',
-                  transform:
-                    animatedPositionsRef.current[index]?.getTranslateTransform() || [],
-                }}
-              />
-            ))}
+            {snake.map((_, index) => {
+             const animatedStyle = animatedPositionsRef.current[index]
+                ? animatedPositionsRef.current[index].getLayout()
+                : { left: 0, top: 0 };
+
+              return (
+                <Animated.View
+                  key={index}
+                  style={[
+                    styles.snakeSegment,
+                    {
+                      backgroundColor: index === 0 ? '#2ecc71' : '#27ae60',
+                      ...animatedStyle, 
+                    },
+                  ]}
+                />
+              );
+            })}
+
 
             <View
-              style={{
-                position: 'absolute',
-                width: CELL_SIZE,
-                height: CELL_SIZE,
-                backgroundColor: '#e74c3c',
-                left: food.x * CELL_SIZE,
-                top: food.y * CELL_SIZE,
-              }}
+              style={[
+                styles.food,
+                {
+                  left: food.x * CELL_SIZE,
+                  top: food.y * CELL_SIZE,
+                },
+              ]}
             />
           </View>
         </View>
 
-          <Modal transparent={true} visible={modalVisible} animationType="fade">
-            <View style={styles.modalOverlay}>
-              <View style={styles.modalBox}>
-                <TouchableOpacity onPress={() => setModalVisible(false)} style={styles.closeButton}>
-                  <Ionicons name="close-circle" size={32} color="#ff6b6b" />
-                </TouchableOpacity>
+        <Modal transparent={true} visible={modalVisible} animationType="fade">
+          <View style={styles.modalOverlay}>
+            <View style={styles.modalBox}>
+              <TouchableOpacity onPress={() => setModalVisible(false)} style={styles.closeButton}>
+                <Ionicons name="close-circle" size={32} color="#ff6b6b" />
+              </TouchableOpacity>
 
-                <Text style={styles.modalText}>{modalMessage}</Text>
+              <Text style={styles.modalText}>{modalMessage}</Text>
 
-                <TouchableOpacity
-                  style={[styles.modalActionButton, { backgroundColor: '#4ecdc4' }]}
-                  onPress={handleStart}
-                >
-                  <Text style={styles.modalActionText}>Play Again</Text>
-                </TouchableOpacity>
+              <TouchableOpacity
+                style={[styles.modalActionButton, { backgroundColor: '#4ecdc4' }]}
+                onPress={handleStart}
+              >
+                <Text style={styles.modalActionText}>Play Again</Text>
+              </TouchableOpacity>
 
-                <TouchableOpacity
-                  style={[styles.modalActionButton, { backgroundColor: '#ffa69e' }]}
-                  onPress={() => {
-                    setModalVisible(false);
-                    navigation.goBack();
-                  }}
-                >
-                  <Text style={styles.modalActionText}>Home</Text>
-                </TouchableOpacity>
-              </View>
+              <TouchableOpacity
+                style={[styles.modalActionButton, { backgroundColor: '#ffa69e' }]}
+                onPress={() => {
+                  setModalVisible(false);
+                  navigation.goBack();
+                }}
+              >
+                <Text style={styles.modalActionText}>Home</Text>
+              </TouchableOpacity>
             </View>
-          </Modal>
-
+          </View>
+        </Modal>
       </SafeAreaView>
     </SafeAreaProvider>
   );
@@ -298,6 +380,19 @@ const styles = StyleSheet.create({
     textAlign: 'center',
     flex: 1,
   },
+  scoreContainer: {
+    flexDirection: 'row',
+    justifyContent: 'space-around',
+    width: '100%',
+    paddingHorizontal: 16,
+    marginTop: 8,
+    marginBottom: 16,
+  },
+  scoreText: {
+    fontSize: 16,
+    color: '#666',
+    fontWeight: '600',
+  },
   board: {
     width: NUM_COLUMNS * CELL_SIZE,
     height: NUM_ROWS * CELL_SIZE,
@@ -305,6 +400,19 @@ const styles = StyleSheet.create({
     borderWidth: 2,
     borderColor: '#333',
     position: 'relative',
+    overflow: 'hidden', // Ensure snake segments don't render outside board boundaries
+  },
+  snakeSegment: {
+    position: 'absolute',
+    width: CELL_SIZE,
+    height: CELL_SIZE,
+  },
+  food: {
+    position: 'absolute',
+    width: CELL_SIZE,
+    height: CELL_SIZE,
+    backgroundColor: '#e74c3c',
+    borderRadius: CELL_SIZE / 2, // Make food round
   },
   startButton: {
     backgroundColor: '#2ecc71',
@@ -312,6 +420,11 @@ const styles = StyleSheet.create({
     paddingHorizontal: 32,
     borderRadius: 14,
     marginBottom: 24,
+    shadowColor: '#2ecc71',
+    shadowOffset: { width: 0, height: 4 },
+    shadowOpacity: 0.3,
+    shadowRadius: 8,
+    elevation: 6,
   },
   startText: {
     color: '#fff',
@@ -354,11 +467,23 @@ const styles = StyleSheet.create({
     borderRadius: 14,
     width: '80%',
     alignItems: 'center',
+    marginTop: 12, // Added margin for spacing between buttons
+    shadowColor: '#000',
+    shadowOffset: { width: 0, height: 2 },
+    shadowOpacity: 0.1,
+    shadowRadius: 4,
+    elevation: 3,
   },
   modalActionText: {
     color: '#fff',
     fontSize: 17,
     fontWeight: '700',
+  },
+  closeButton: {
+    position: 'absolute',
+    top: 15,
+    right: 15,
+    zIndex: 1,
   },
   dropdown: {
     position: 'absolute',

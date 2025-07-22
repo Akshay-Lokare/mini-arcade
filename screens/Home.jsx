@@ -6,7 +6,11 @@ const Home = ({ navigation }) => {
   return (
     <SafeAreaProvider>
       <SafeAreaView style={styles.container}>
-        <Text style={styles.title}>Mini Arcade 🎮</Text>
+        <Text style={styles.title}>Mini Arcade</Text>
+
+        <TouchableOpacity style={{ marginTop: -40 }} onPress={() => navigation.navigate('HighScoreScreen')}>
+          <Text> Highscores </Text>
+        </TouchableOpacity>
 
         <View style={styles.gamesList}>
           <TouchableOpacity style={styles.game} onPress={() => navigation.navigate('Snake')}>
