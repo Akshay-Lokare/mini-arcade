@@ -13,6 +13,7 @@ import Ionicons from 'react-native-vector-icons/Ionicons';
 import FontAwesome5 from 'react-native-vector-icons/FontAwesome5';
 import { Snackbar } from 'react-native-paper';
 import { updateRPSScore } from '../../redux/scoreSlice';
+import { Vibration } from 'react-native';
 
 const RPS = () => {
   const navigation = useNavigation();
@@ -76,6 +77,7 @@ const RPS = () => {
         setGameOver(true);
         setModalMessage(`Game over! Your streak: ${streak}`);
         setModalVisible(true);
+        Vibration.vibrate(2000);
         if (streak > highScore) {
           dispatch(updateRPSScore(streak));
         }

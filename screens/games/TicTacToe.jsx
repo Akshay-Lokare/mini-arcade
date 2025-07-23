@@ -9,6 +9,7 @@ import {
 import { SafeAreaView, SafeAreaProvider } from 'react-native-safe-area-context';
 import Ionicons from 'react-native-vector-icons/Ionicons';
 import { useNavigation } from '@react-navigation/native';
+import { Vibration } from 'react-native';
 
 const TicTacToe = () => {
   const [board, setBoard] = useState(Array(9).fill(null));
@@ -56,6 +57,7 @@ const TicTacToe = () => {
     if (winner) {
       setModalMessage(`${winner} wins! 🎉`);
       setModalVisible(true);
+      Vibration.vibrate(2000);
       return;
     }
 
@@ -63,6 +65,7 @@ const TicTacToe = () => {
     if (isDraw) {
       setModalMessage("It's a draw! 🤝");
       setModalVisible(true);
+      Vibration.vibrate(1000);
       return;
     }
 

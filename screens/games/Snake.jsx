@@ -16,6 +16,7 @@ import {
 import { SafeAreaView, SafeAreaProvider } from 'react-native-safe-area-context';
 import Ionicons from 'react-native-vector-icons/Ionicons';
 import { updateSnakeScore } from '../../redux/scoreSlice';
+import { Vibration } from 'react-native';
 
 const CELL_SIZE = 20;
 const SCREEN_WIDTH = Dimensions.get('window').width;
@@ -126,6 +127,7 @@ const Snake = () => {
       if (isOutOfBounds(newHead) || isSelfCollision(newHead, currentSnake)) {
         gameEnded = true;
         setModalMessage('Game Over! You hit the wall or yourself.');
+        Vibration.vibrate(2000);
       } else {
         // Check for food collision
         if (checkFoodCollision(newHead, currentFood)) {
